@@ -1,0 +1,167 @@
+Parameters:
+  GithubOwner:
+    Type: String
+
+  GithubRepo:
+    Type: String
+  
+  GithubBranch:
+    Type: String
+
+  GithubToken:
+    Type: String
+  
+  ClusterName:
+    Type: String
+
+  PropertiesName:
+    Type: String  
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParametersGroups:
+    - Label:
+        default: Cluster General Params
+      Parameters:
+        - ClusterName
+    
+    - Label:
+        default: Cluster Github Params
+      Parameters:
+        - GithubRepo
+        - GithubOwner
+        - GithubBranch
+      
+Resources:
+  CloudFormationExecutionRole:
+    Type: AWS::IAM::Role
+    DeletionPolicy: Retain
+    Properties:
+      RoleName: !Sub cf-${ClusterName}-role
+      Path: /
+      AssumeRolePolicyDocument: |
+        {
+          "Statement": [{
+                "Effect": "Allow",
+                "Principal": { "Service": [ "cloudformation.amazonaws.com" ]},
+                "Action": [ "sts:AssumeRole" ]
+            }]
+        }
+      Polices:
+        - PolicyName: root
+          PolicyDocument: # !!
+            Version: 2012-10-17
+            Statement:
+              - Resource: "*"
+                - iam:*
+                - ec2:*
+  
+  CodePipelineServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub cp-${ClusterName}-role
+      Path: /
+      AssumeRolePolicyDocument: |
+        {
+          "Statement": [{
+                "Effect": "Allow",
+                "Principal": { "Service": [ "codepipeline.amazonaws.com" ]},
+                "Action": [ "sts:AssumeRole" ]
+            }]
+        }
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Resource:
+                - !Sub arn::aws::s3:::*
+                Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:GetBucketVersioning
+              - Resource: "*"
+                Effect: Allow
+                Action:
+                  - codebuild:StartBuild
+                  - codebuild:BatchGetBuilds
+                  - cloudformation:*
+                  - cloudwatch:*
+                  - events:*
+                  - iam:PassRole
+                  - secretsmanager:*
+                  - ec2:*
+
+  ArtifactBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Properties:
+      BucketName: !Ref PropertiesName
+  
+  Pipeline:
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      Name: !Ref PropertiesName
+      RoleArn: !GetAtt CodePipelineServiceRole.Arn
+      ArtifactStore:
+        Type: S3
+        Location: !Ref ArtifactBucket
+      Stages:
+        - Name: Source
+        Actions:
+          - Name: DevOps
+            ActionTypeId: # !!
+              Category: Source
+              Owner: ThirdyParty
+              Version: 1
+            Configuration:
+              Owner: !Ref GithubOwner
+              Repo: !Ref GithubRepo
+              Branch: !Ref GithubBranch
+              OAuthToken: !Ref GithubToken
+            OutputArtifacts:
+              - Name: DevOps
+            RunOrder: 1
+        - Name: ClusterDeploy
+          Actions:
+            - Name: CreateVPCChangeSet
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ChangeSetName: Deploy
+                ActionMode: CHANGE_SET_REPLACE
+                StackName: !Sub ${ClusterName}-vpc
+                Capabilities: CAPABILITY_NAMED_IAM
+                TemplatePath: !Sub DevOps::infrastructure/cluster-vpc.yml
+                RoleArn: !GetAtt CloudFormationExecutionRole.Arn
+                ParameterOverrides: !Sub |
+                  {
+                    "ClusterName": "${ClusterName}"
+                  }
+              RunOrder: 1
+              InputArtifacts:
+                - Name: DevOps
+            - Name: ExecuteVPCChangeSet
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ChangeSetName: Deploy
+                ActionMode: CHANGE_SET_EXECUTE
+                StackName: !Sub ${ClusterName}-vpc
+                RoleArn: !GetAtt CloudFormationExecutionRole.Arn
+              RunOrder: 2
+
+Outputs:
+  PipelineUrl:
+    Value: !Sub https://console.aws.amazon.com/codepipeline/home?region=${AWS::Region}#/view/${Pipeline}
+
+
+
