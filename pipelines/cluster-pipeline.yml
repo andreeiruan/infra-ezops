@@ -24,6 +24,7 @@ Metadata:
         default: Cluster General Params
       Parameters:
         - ClusterName
+        - PropertiesName
     
     - Label:
         default: Cluster Github Params
@@ -31,30 +32,33 @@ Metadata:
         - GithubRepo
         - GithubOwner
         - GithubBranch
+        - GithubToken
       
 Resources:
   CloudFormationExecutionRole:
     Type: AWS::IAM::Role
-    DeletionPolicy: Retain
+    # DeletionPolicy: Retain
     Properties:
       RoleName: !Sub cf-${ClusterName}-role
       Path: /
       AssumeRolePolicyDocument: |
         {
-          "Statement": [{
+            "Statement": [{
                 "Effect": "Allow",
                 "Principal": { "Service": [ "cloudformation.amazonaws.com" ]},
                 "Action": [ "sts:AssumeRole" ]
             }]
         }
-      Polices:
+      Policies:
         - PolicyName: root
-          PolicyDocument: # !!
+          PolicyDocument: 
             Version: 2012-10-17
             Statement:
               - Resource: "*"
-                - iam:*
-                - ec2:*
+                Effect: Allow
+                Action:                                    
+                  - iam:*                  
+                  - ec2:*
   
   CodePipelineServiceRole:
     Type: AWS::IAM::Role
@@ -75,7 +79,7 @@ Resources:
             Version: 2012-10-17
             Statement:
               - Resource:
-                - !Sub arn::aws::s3:::*
+                - !Sub arn:aws:s3:::*
                 Effect: Allow
                 Action:
                   - s3:PutObject
@@ -96,7 +100,7 @@ Resources:
 
   ArtifactBucket:
     Type: AWS::S3::Bucket
-    DeletionPolicy: Retain
+    # DeletionPolicy: Retain
     Properties:
       BucketName: !Ref PropertiesName
   
@@ -110,12 +114,13 @@ Resources:
         Location: !Ref ArtifactBucket
       Stages:
         - Name: Source
-        Actions:
+          Actions:
           - Name: DevOps
             ActionTypeId: # !!
               Category: Source
-              Owner: ThirdyParty
+              Owner: ThirdParty
               Version: 1
+              Provider: GitHub
             Configuration:
               Owner: !Ref GithubOwner
               Repo: !Ref GithubRepo
