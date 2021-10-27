@@ -18,7 +18,26 @@ Parameters:
     Type: String
 
   DefaultAcmCertificateArn:
-    Type: String 
+    Type: String
+  
+  CidrIp:
+    Type: String
+    Default: 10.10.0.0
+  
+  DBInstanceType:    
+    AllowedValues:
+      - db.t3.large
+      - db.t4g.medium
+      - db.r3.xlarge
+
+  DBSnapshotName:
+    Type: String
+
+  DBHasAutomaticBackup:
+    Type: String
+
+  HostedZoneName:
+    Type: String
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -40,7 +59,16 @@ Metadata:
     - Label:
         default: Load Balancer Params
       Parameters:
-        - DefaultAcmCertificateArn
+        - DBInstanceType
+        - DBSnapshotName
+        - DBHasAutomaticBackup
+        - HostedZoneName
+        - CidrIp
+
+    - Label:
+        default: RDS Params
+      Parameters:
+        - DefaultAcmCertificateArn  
       
 Resources:
   CloudFormationExecutionRole:
@@ -206,6 +234,43 @@ Resources:
                 StackName: !Sub ${ClusterName}-lb
                 RoleArn: !GetAtt CloudFormationExecutionRole.Arn
               RunOrder: 4
+            - Name: CreateRDSChangeSet
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ChangeSetName: Deploy
+                ActionMode: CHANGE_SET_REPLACE
+                StackName: !Sub ${ClusterStackName}-rds
+                Capabilities: CAPABILITY_NAMED_IAM
+                TemplatePath: !Sub DevOps::infrastructure/cluster-rds.yml
+                RoleArn: !GetAtt CloudFormationExecutionRole.Arn
+                ParameterOverrides: !Sub |
+                  {
+                    "ClusterName": "${ClusterName}",
+                    "DBInstanceType": "${DBInstanceType}",
+                    "DBSnapshotName": "${DBSnapshotName}",
+                    "DBHasAutomaticBackup": "${DBHasAutomaticBackup}",
+                    "HostedZoneName": "${HostedZoneName}", 
+                    "CidrIp": "${CidrIp}"
+                  }
+              RunOrder: 5
+              InputArtifacts:
+                - Name: DevOps
+            - Name: ExecuteRDSChangeSet
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ChangeSetName: Deploy
+                ActionMode: CHANGE_SET_EXECUTE
+                StackName: !Sub ${ClusterStackName}-rds
+                RoleArn: !GetAtt CloudFormationExecutionRole.Arn
+              RunOrder: 6
             
 Outputs:
   PipelineUrl:
