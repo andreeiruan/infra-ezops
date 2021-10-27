@@ -15,7 +15,10 @@ Parameters:
     Type: String
 
   PropertiesName:
-    Type: String  
+    Type: String
+
+  DefaultAcmCertificateArn:
+    Type: String 
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -33,6 +36,11 @@ Metadata:
         - GithubOwner
         - GithubBranch
         - GithubToken
+    
+    - Label:
+        default: Load Balancer Params
+      Parameters:
+        - DefaultAcmCertificateArn
       
 Resources:
   CloudFormationExecutionRole:
@@ -163,7 +171,40 @@ Resources:
                 StackName: !Sub ${ClusterName}-vpc
                 RoleArn: !GetAtt CloudFormationExecutionRole.Arn
               RunOrder: 2
-
+            - Name: CreateELBChangeSet
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ChangeSetName: Deploy
+                ActionMode: CHANGE_SET_REPLACE
+                StackName: !Sub ${ClusterStackName}-elb
+                Capabilities: CAPABILITY_NAMED_IAM
+                TemplatePath: !Sub DevOps::infrastructure/cluster-lb.yml
+                RoleArn: !GetAtt CloudFormationExecutionRole.Arn
+                ParameterOverrides: !Sub |
+                  {
+                    "ClusterName": "${ClusterName}",
+                    "DefaultAcmCertificateArn": "${DefaultAcmCertificateArn}"
+                  }
+              RunOrder: 3
+              InputArtifacts:
+                - Name: DevOps
+            - Name: ExecuteELBChangeSet
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ChangeSetName: Deploy
+                ActionMode: CHANGE_SET_EXECUTE
+                StackName: !Sub ${ClusterStackName}-lb
+                RoleArn: !GetAtt CloudFormationExecutionRole.Arn
+              RunOrder: 4
+            
 Outputs:
   PipelineUrl:
     Value: !Sub https://console.aws.amazon.com/codepipeline/home?region=${AWS::Region}#/view/${Pipeline}
