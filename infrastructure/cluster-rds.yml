@@ -71,7 +71,7 @@ Resources:
     Type: AWS::RDS::DBInstance
     Properties:
       Engine: aurora-mysql
-      EngineVersion: 5.7.34
+      EngineVersion: 5.7.mysql_aurora.2.09.2
       DBClusterIdentifier: !Ref DatabaseCluster
       DBInstanceClass: !Ref DBInstanceType
       DBSubnetGroupName: !Ref DBSubnetGroup
@@ -93,7 +93,7 @@ Resources:
     Type: AWS::RDS::DBCluster
     Properties:
       Engine: aurora-mysql
-      EngineVersion: 5.7.34
+      EngineVersion: 5.7.mysql_aurora.2.09.2
       SnapshotIdentifier: !If [dbHasSnapshot, !Ref DBSnapshotName, !Ref 'AWS::NoValue']
       MasterUsername: !If [dbHasSnapshot, !Ref 'AWS::NoValue', !Sub '{{resolve:ssm:/ECS-CLUSTER/${ClusterName}/RDS_ROOT_USERNAME:1}}']
       MasterUserPassword: !If [dbHasSnapshot, !Ref 'AWS::NoValue', !Sub '{{resolve:ssm-secure:/ECS-CLUSTER/${ClusterName}/RDS_ROOT_PASSWORD:1}}']
