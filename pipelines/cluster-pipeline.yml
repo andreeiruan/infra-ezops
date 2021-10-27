@@ -67,6 +67,8 @@ Resources:
                 Action:                                    
                   - iam:*                  
                   - ec2:*
+                  - elasticloadbalancing:*
+                  - DevOpslication-autoscaling:*
   
   CodePipelineServiceRole:
     Type: AWS::IAM::Role
