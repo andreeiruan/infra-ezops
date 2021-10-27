@@ -128,13 +128,22 @@ Resources:
               - Resource: "*"
                 Effect: Allow
                 Action:                                    
-                  - iam:*                  
+                  - ecs:*
+                  - ecr:*
+                  - iam:*
+                  - DevOpslication-autoscaling:*
                   - ec2:*
                   - elasticloadbalancing:*
-                  - DevOpslication-autoscaling:*
-                  - rds:*
                   - ssm:*
                   - route53:*
+                  - cloudwatch:*
+                  - events:*
+                  - secretsmanager:*
+                  - autoscaling:*
+                  - rds:*
+                  - elasticache:*
+                  - logs:*
+                  - servicediscovery:*
   
   CodePipelineServiceRole:
     Type: AWS::IAM::Role
