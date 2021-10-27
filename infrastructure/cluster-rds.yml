@@ -64,8 +64,8 @@ Resources:
      Properties:
        Description: !Ref 'AWS::StackName'
        Family: aurora-mysql5.7
-       Parameters:
-         apg_plan_mgmt.max_databases: 10
+      #  Parameters:
+      #    apg_plan_mgmt.max_databases: 10
 
   DBInstance:
     Type: AWS::RDS::DBInstance
@@ -84,8 +84,8 @@ Resources:
      Properties:
        Description: !Ref 'AWS::StackName'
        Family: aurora-mysql5.7
-       Parameters:
-         apg_plan_mgmt.max_databases: 10
+      #  Parameters:
+      #    apg_plan_mgmt.max_databases: 10
 
   DatabaseCluster:
     Type: AWS::RDS::DBCluster

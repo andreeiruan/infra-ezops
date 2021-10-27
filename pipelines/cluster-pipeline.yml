@@ -24,7 +24,8 @@ Parameters:
     Type: String
     Default: 10.10.0.0
   
-  DBInstanceType:    
+  DBInstanceType:
+    Type: String   
     AllowedValues:
       - db.t3.large
       - db.t4g.medium
@@ -97,6 +98,9 @@ Resources:
                   - ec2:*
                   - elasticloadbalancing:*
                   - DevOpslication-autoscaling:*
+                  - rds:*
+                  - ssm:*
+                  - route53:*
   
   CodePipelineServiceRole:
     Type: AWS::IAM::Role
@@ -243,7 +247,7 @@ Resources:
               Configuration:
                 ChangeSetName: Deploy
                 ActionMode: CHANGE_SET_REPLACE
-                StackName: !Sub ${ClusterStackName}-rds
+                StackName: !Sub ${ClusterName}-rds
                 Capabilities: CAPABILITY_NAMED_IAM
                 TemplatePath: !Sub DevOps::infrastructure/cluster-rds.yml
                 RoleArn: !GetAtt CloudFormationExecutionRole.Arn
@@ -268,7 +272,7 @@ Resources:
               Configuration:
                 ChangeSetName: Deploy
                 ActionMode: CHANGE_SET_EXECUTE
-                StackName: !Sub ${ClusterStackName}-rds
+                StackName: !Sub ${ClusterName}-rds
                 RoleArn: !GetAtt CloudFormationExecutionRole.Arn
               RunOrder: 6
             
