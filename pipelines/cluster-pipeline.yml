@@ -27,17 +27,40 @@ Parameters:
   DBInstanceType:
     Type: String   
     AllowedValues:
-      - db.t3.large
       - db.t4g.medium
-      - db.r3.xlarge
 
   DBSnapshotName:
     Type: String
+    Default: WITHOUT
 
   DBHasAutomaticBackup:
     Type: String
 
   HostedZoneName:
+    Type: String
+
+  ECSInstanceTypeWeb:
+    Type: String
+  
+  KeyName:
+    Type: String
+
+  AsgServiceMinWeb:
+    Type: String
+  
+  AsgServiceDesiredWeb:
+    Type: String
+  
+  AsgServiceMaxWeb:
+    Type: String
+  
+  S3Bucket:
+    Type: String
+
+  TypeProject:
+    Type: String
+
+  EcsImage:
     Type: String
 
 Metadata:
@@ -48,6 +71,7 @@ Metadata:
       Parameters:
         - ClusterName
         - PropertiesName
+        - HostedZoneName
     
     - Label:
         default: Cluster Github Params
@@ -63,13 +87,23 @@ Metadata:
         - DBInstanceType
         - DBSnapshotName
         - DBHasAutomaticBackup
-        - HostedZoneName
         - CidrIp
 
     - Label:
         default: RDS Params
       Parameters:
-        - DefaultAcmCertificateArn  
+        - DefaultAcmCertificateArn
+    
+    - Label:
+        default: ECS Params
+        - ECSInstanceTypeWeb
+        - KeyName
+        - AsgServiceMinWeb
+        - AsgServiceDesiredWeb
+        - AsgServiceMaxWeb
+        - S3Bucket
+        - TypeProject
+        - EcsImage
       
 Resources:
   CloudFormationExecutionRole:
@@ -273,6 +307,47 @@ Resources:
                 ChangeSetName: Deploy
                 ActionMode: CHANGE_SET_EXECUTE
                 StackName: !Sub ${ClusterName}-rds
+                RoleArn: !GetAtt CloudFormationExecutionRole.Arn
+              RunOrder: 6
+            - Name: CreateECSChangeSet
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ChangeSetName: Deploy
+                ActionMode: CHANGE_SET_REPLACE
+                StackName: !Sub ${ClusterStackName}-ecs
+                Capabilities: CAPABILITY_NAMED_IAM
+                TemplatePath: !Sub DevOps::infrastructure/cluster-ecs.yml
+                RoleArn: !GetAtt CloudFormationExecutionRole.Arn
+                ParameterOverrides: !Sub |
+                  {
+                    "ClusterName": "${ClusterName}",
+                    "ECSInstanceTypeWeb": "${ECSInstanceTypeWeb}",
+                    "KeyName": "${KeyName}",
+                    "AsgServiceMinWeb": "${AsgServiceMinWeb}",
+                    "AsgServiceMaxWeb": "${AsgServiceMaxWeb}",
+                    "AsgServiceDesiredWeb": "${AsgServiceDesiredWeb}",
+                    "S3Bucket": "${S3Bucket}",
+                    "EcsImage": "${EcsImage}",
+                    "HostedZoneName": "${HostedZoneName}",
+                    "TypeProject": "${TypeProject}"
+                  }
+              RunOrder: 5
+              InputArtifacts:
+                - Name: DevOps
+            - Name: ExecuteECSChangeSet
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Version: 1
+                Provider: CloudFormation
+              Configuration:
+                ChangeSetName: Deploy
+                ActionMode: CHANGE_SET_EXECUTE
+                StackName: !Sub ${ClusterStackName}-ecs
                 RoleArn: !GetAtt CloudFormationExecutionRole.Arn
               RunOrder: 6
             
