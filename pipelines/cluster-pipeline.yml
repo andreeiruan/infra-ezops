@@ -180,7 +180,7 @@ Resources:
               Configuration:
                 ChangeSetName: Deploy
                 ActionMode: CHANGE_SET_REPLACE
-                StackName: !Sub ${ClusterStackName}-elb
+                StackName: !Sub ${ClusterName}-elb
                 Capabilities: CAPABILITY_NAMED_IAM
                 TemplatePath: !Sub DevOps::infrastructure/cluster-lb.yml
                 RoleArn: !GetAtt CloudFormationExecutionRole.Arn
@@ -201,7 +201,7 @@ Resources:
               Configuration:
                 ChangeSetName: Deploy
                 ActionMode: CHANGE_SET_EXECUTE
-                StackName: !Sub ${ClusterStackName}-lb
+                StackName: !Sub ${ClusterName}-lb
                 RoleArn: !GetAtt CloudFormationExecutionRole.Arn
               RunOrder: 4
             

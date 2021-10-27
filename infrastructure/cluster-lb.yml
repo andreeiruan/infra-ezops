@@ -33,7 +33,7 @@ Resources:
         - 'Fn::ImportValue': !Sub ${ClusterName}PublicSubnet1
         - 'Fn::ImportValue': !Sub ${ClusterName}PublicSubnet2
       SecurityGroups:
-        - !Ref LoadBalancerSecurityGroup
+        - !Ref LoadBalancerSG
         - 'Fn::ImportValue': !Sub ${ClusterName}InternalAccessSecurityGroup
   
   PublicAlbDefaultTargetGroup:
@@ -81,10 +81,10 @@ Resources:
           TargetGroupArn: !Ref PublicAlbDefaultTargetGroup
 
 Outputs:
-  LoadBalancerSecurityGroup:
-    Value: !Ref LoadBalancerSecurityGroup
+  LoadBalancerSG:
+    Value: !Ref LoadBalancerSG
     Export:
-      Name: !Sub ${ClusterName}LoadBalancerSecurityGroup
+      Name: !Sub ${ClusterName}LoadBalancerSG
 
   FrontendAlbDefaultTargetGroup:
     Value: !Ref PublicAlbDefaultTargetGroup
