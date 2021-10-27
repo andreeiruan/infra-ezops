@@ -136,7 +136,7 @@ Resources:
        - IpProtocol: tcp
          FromPort: 3306
          ToPort: 3306
-         CidrIp: !Sub ${CidrIp}/16/20
+         CidrIp: !Sub ${CidrIp}/16
 
   RDSDNS:
    Type: AWS::Route53::RecordSetGroup
