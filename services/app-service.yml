@@ -157,9 +157,9 @@ Resources:
         - "Fn::ImportValue": !Sub ${ClusterName}BackendAlbListenerForHttp
       Priority: !Ref SiteTgPriority
       Conditions:
-        - Field: host-header
+        - Field: path-pattern
           Values:
-            - !Sub ${LoadBalancerCname}
+            - /dummy
       Actions:
         - TargetGroupArn: !Ref TargetGroup
           Type: forward
@@ -174,7 +174,6 @@ Resources:
           TTL: 60
           ResourceRecords:
             - "Fn::ImportValue": !Sub "${ClusterName}BackendAlbDns"
-
 
   EcsExecutionRoleArn:
     Type: AWS::IAM::Role
