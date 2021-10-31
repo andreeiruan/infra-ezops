@@ -230,10 +230,6 @@ Resources:
               awslogs-stream-prefix: /service
               awslogs-region: !Ref AWS::Region
           Privileged: true
-          Command:
-            - bash
-            - "-c"
-            - "(/app/entrypoint.sh)"
           Environment:
             - Name: AWS_REGION
               Value: 'us-east-1'
