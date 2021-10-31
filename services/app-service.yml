@@ -1,338 +1,315 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Sets up pipeline for app sb
+Description: Sets Up Service Web
 Parameters:
-  GitHubRepo:
+  ClusterName:
     Type: String
 
-  GitHubBranch:
+  EcsTasksNumber:
     Type: String
+    Default: 1
 
-  GitHubOwner:
+  ContainerPort:
     Type: String
-    
-  InfraGitHubOwner:
-    Type: String
+    Default: 3000
 
-  InfraRepo:
+  ContainerVirtualCPUs:
     Type: String
+    Default: 1
 
-  InfraBranch:
+  ContainerMemoryMin:
     Type: String
+    Default: 4096
 
-  GitHubToken:
+  ContainerMemoryMax:
     Type: String
+    Default: LIMITLESS
 
-  StackName:
+  DockerImageVersion:
     Type: String
 
   HostedZoneName:
     Type: String
-
-  ENV:
-    Default: "dev"
-    Type: String
-  
-  ProjectName:
-    Default: "default"
-    Type: String
-  
-  ######## services parameters ########
-  MemoryReservation:
-    Default: "1024"
-    Type: String
-
-  CPU:
-    Default: 1
-    Type: Number
-
-  ClusterName:
-    Default: Application
-    Type: String
-
+   
   CertificateArn:
     Type: String
 
+  AlbHealthCheckInterval:
+    Type: String
+    Default: 30
+
+  AlbHealthCheckPath:
+    Type: String
+    Default: /v1/health
+
+  AlbHealthCheckTimeout:
+    Type: String
+    Default: 10
+
+  AlbHealthCheckHealthyThreshold:
+    Type: String
+    Default: 10
+
+  AlbHealthCheckUnhealthyThreshold:
+    Type: String
+    Default: 10
+
+  SiteTgPriority:
+    Type: String
+    Default: 10
+
   LoadBalancerCname:
     Type: String
-  
-  ContainerPort:
+
+  AlbHealthCheckStartPeriod:
+    Type: String
+    Default: 30
+
+  ContainerNetworkMode:
+    Type: String
+    Default: bridge
+
+  ContainerHealthCheckInterval:
+    Type: String
+    Default: 30
+
+  ContainerHealthCheckTimeout:
+    Type: String
+    Default: 10
+
+  ContainerHealthCheckRetries:
+    Type: String
+    Default: 5
+
+  ContainerHealthCheckStartPeriod:
+    Type: String
+    Default: 200
+
+  EcsTypePlacementStrategy:
+    Type: String
+    Default: binpack
+
+  EcsFieldPlacementStrategy:
+    Type: String
+    Default: cpu
+
+  HasHTTPS:
+    Type: String
+    Default: true
+
+  ProjectName:
     Type: String
   
-  ApiHealthCheckPath:
+  StageEnv:
     Type: String
+    Default: "DEV"
+
   
-  EnvironmentFolder:
-    Type: String
-    Default: development
+Conditions:
+  hasSSL: !Equals [!Ref HasHTTPS, "true"]
+  hasOnlyOneTask: !Equals [!Ref EcsTasksNumber, "1"]
+  containerHasMemoryLimit: !Not [!Equals [!Ref ContainerMemoryMax, "LIMITLESS"]]
+  hasServiceDiscovery: !Equals [!Ref ContainerNetworkMode, "awsvpc"]
 
 Resources:
-
-  ArtifactBucket: 
-    Type: 'AWS::S3::Bucket'
-    Properties: {}
-
-  Repository:
-    Type: AWS::ECR::Repository
-    DeletionPolicy: Delete
-    Properties: 
-      RepositoryName: !Sub ${ProjectName}
-
-  CloudFormationExecutionRole:
-    Type: AWS::IAM::Role
-    DeletionPolicy: Delete
+  LogGroup:
+    Type: AWS::Logs::LogGroup
     Properties:
-      RoleName: !Sub cfn-${ClusterName}-${ProjectName}
-      Path: /
-      AssumeRolePolicyDocument: |
-        {
-            "Statement": [{
-                "Effect": "Allow",
-                "Principal": { "Service": [ "cloudformation.amazonaws.com" ]},
-                "Action": [ "sts:AssumeRole" ]
-            }]
-        }
-      Policies:
-        - PolicyName: root
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Resource: "*"
-                Effect: Allow
-                Action:
-                  - ecs:*
-                  - ecr:*
-                  - iam:*
-                  - ec2:*
-                  - logs:*
-                  - route53:*
-                  - codebuild:*
-                  - codepipeline:*
-                  - elasticloadbalancing:*
-                  - application-autoscaling:*
-                  - secretsmanager:*
+      LogGroupName: !Sub EliteGamingLive/${StageEnv}/API
 
-  CodeBuildServiceRole:
-    Type: AWS::IAM::Role
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
-      RoleName: !Sub cb-${ClusterName}-${ProjectName}
-      Path: /
-      AssumeRolePolicyDocument: |
-        {
-            "Statement": [{
-                "Effect": "Allow",
-                "Principal": { "Service": [ "codebuild.amazonaws.com" ]},
-                "Action": [ "sts:AssumeRole" ]
-            }]
-        }
-      Policies:
-        - PolicyName: root
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Resource: "*"
-                Effect: Allow
-                Action:
-                  - logs:CreateLogGroup
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
-                  - cloudformation:*
-                  - ecs:*
-                  - ecr:*
-                  - ec2:*
-                  - ssm:GetParameter
-                  - secretsmanager:*
-              - Resource: !Sub arn:aws:s3:::${ArtifactBucket}/*
-                Effect: Allow
-                Action:
-                  - s3:GetObject
-                  - s3:PutObject
-                  - s3:GetObjectVersion
-              - Resource: !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/${Repository}
-                Effect: Allow
-                Action:
-                  - ecr:GetDownloadUrlForLayer
-                  - ecr:BatchGetImage
-                  - ecr:BatchCheckLayerAvailability
-                  - ecr:PutImage
-                  - ecr:InitiateLayerUpload
-                  - ecr:UploadLayerPart
-                  - ecr:CompleteLayerUpload
+      Name: !Sub tg-${ProjectName}
+      VpcId:
+        "Fn::ImportValue": !Sub ${ClusterName}VPC
+      Protocol: HTTP
+      TargetType: !If [hasServiceDiscovery, "ip", "instance"]
+      Port: !Ref ContainerPort
+      Matcher:
+        HttpCode: "200-499"
+      HealthCheckIntervalSeconds: !Ref AlbHealthCheckInterval
+      HealthCheckPath: !Ref AlbHealthCheckPath
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: !Ref AlbHealthCheckTimeout
+      HealthyThresholdCount: !Ref AlbHealthCheckHealthyThreshold
+      UnhealthyThresholdCount: !Ref AlbHealthCheckUnhealthyThreshold
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: 30
+        - Key: stickiness.enabled
+          Value: true
 
-  CodePipelineServiceRole:
+  ListenerCertificate:
+    Type: AWS::ElasticLoadBalancingV2::ListenerCertificate
+    Condition: hasSSL
+    Properties:
+      Certificates:
+        - CertificateArn: !Ref CertificateArn
+      ListenerArn:
+        "Fn::ImportValue": !Sub ${ClusterName}BackendAlbListenerForHttps
+
+  SiteNameListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !If
+        - hasSSL
+        - "Fn::ImportValue": !Sub ${ClusterName}BackendAlbListenerForHttps
+        - "Fn::ImportValue": !Sub ${ClusterName}BackendAlbListenerForHttp
+      Priority: !Ref SiteTgPriority
+      Conditions:
+        - Field: host-header
+          Values:
+            - !Sub ${LoadBalancerCname}
+      Actions:
+        - TargetGroupArn: !Ref TargetGroup
+          Type: forward
+
+  DNS:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneName: !Sub ${HostedZoneName}
+      RecordSets:
+        - Name: !Sub ${LoadBalancerCname}
+          Type: CNAME
+          TTL: 60
+          ResourceRecords:
+            - "Fn::ImportValue": !Sub "${ClusterName}BackendAlbDns"
+
+
+  EcsExecutionRoleArn:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub cp-${ClusterName}-${ProjectName}
+      RoleName: !Sub ExecutionRole-${ClusterName}-${ProjectName}
       Path: /
-      AssumeRolePolicyDocument: |
-        {
-            "Statement": [{
-                "Effect": "Allow",
-                "Principal": { "Service": [ "codepipeline.amazonaws.com" ]},
-                "Action": [ "sts:AssumeRole" ]
-            }]
-        }
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: 
+              - 'ecs-tasks.amazonaws.com'
+            AWS:
+              - !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+          Action:
+            - 'sts:AssumeRole'
       Policies:
-        - PolicyName: root
+        - PolicyName: ECSTaskExecutionRolePolicy
           PolicyDocument:
-            Version: 2012-10-17
             Statement:
-              - Resource:
-                  - !Sub arn:aws:s3:::*
-                Effect: Allow
-                Action:
-                  - s3:*
-              - Resource: "*"
-                Effect: Allow
-                Action:
-                  - codebuild:*
-                  - cloudformation:*
-                  - iam:PassRole
-                  - codestar-connections:*
-                  - ecr:*
-
-  CodeBuildProject:
-    Type: AWS::CodeBuild::Project
+            - Effect: Allow
+              Action:
+                - 'ecs:*'
+                - 'ecr:*'
+                - 'ec2:*'
+                - 'logs:CreateLogStream'
+                - 'logs:PutLogEvents'
+                - 'ssm:GetParameters'
+                - 'secretsmanager:GetSecretValue'
+                - 'kms:Decrypt'
+              Resource: '*'
+  Task:
+    Type: AWS::ECS::TaskDefinition
     Properties:
-      Name: !Sub cb-${ClusterName}-${ProjectName}
-      ServiceRole: !Ref CodeBuildServiceRole
-      Artifacts:
-        Type: CODEPIPELINE
-        Name: !Ref ProjectName
-      Source:
-        Type: CODEPIPELINE
-        BuildSpec: !Sub "buildspec/app-buildspec.yml"
-      VpcConfig:
-        VpcId:
-          'Fn::ImportValue': !Sub ${ClusterName}VPC
-        Subnets: 
-          - 'Fn::ImportValue': !Sub ${ClusterName}PrivateSubnet1
-          - 'Fn::ImportValue': !Sub ${ClusterName}PrivateSubnet2
-        SecurityGroupIds:
-          - 'Fn::ImportValue': !Sub ${ClusterName}InternalAccessSecurityGroup
-      Environment:
-        ComputeType: "BUILD_GENERAL1_LARGE"
-        Image: "aws/codebuild/docker:17.09.0"
-        Type: "LINUX_CONTAINER"
-        EnvironmentVariables:
-          - Name: BRANCH
-            Value: !Ref GitHubBranch
-          - Name: AWS_DEFAULT_REGION
-            Value: !Ref AWS::Region
-          - Name: REPOSITORY_URI
-            Value: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${Repository}
-          - Name: StackName
-            Value: !Ref StackName
-          - Name: PROPERTIES_NAME
-            Value: !Ref ArtifactBucket
-          - Name: CLUSTER_NAME
-            Value: !Ref ClusterName
-          - Name: SITE_NAME
-            Value: !Ref LoadBalancerCname
-
-  Pipeline:
-    Type: AWS::CodePipeline::Pipeline
+      Family: !Sub ${ProjectName}_taskDefinition
+      NetworkMode: !Ref ContainerNetworkMode
+      ExecutionRoleArn: !Ref EcsExecutionRoleArn
+      ContainerDefinitions:
+        - Name: !Sub ${ProjectName}_container
+          Image: !Sub ${DockerImageVersion}
+          PortMappings:
+            - ContainerPort: !Ref ContainerPort
+              HostPort: !If [hasServiceDiscovery, !Ref ContainerPort, 0]
+          MemoryReservation: !Ref ContainerMemoryMin
+          Memory:
+            !If [
+              containerHasMemoryLimit,
+              !Ref ContainerMemoryMax,
+              !Ref "AWS::NoValue",
+            ]
+          Cpu: !Ref ContainerVirtualCPUs
+          Hostname: !Sub Application.${ClusterName}
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Sub EliteGamingLive/${StageEnv}/API
+              awslogs-stream-prefix: /service
+              awslogs-region: !Ref AWS::Region
+          Privileged: true
+          Command:
+            - bash
+            - "-c"
+            - "(/app/scripts/get_secrets.sh) && (/app/entrypoint.sh)"
+          Environment:
+            - Name: AWS_REGION
+              Value: 'us-east-1'
+            - Name: AWS_SECRET_ID
+              Value: !Sub '${StageEnv}/API'
+        
+  Service:
+    Type: AWS::ECS::Service
     Properties:
-      Name: !Sub cp-${ClusterName}-${ProjectName}
-      RoleArn: !GetAtt CodePipelineServiceRole.Arn
-      ArtifactStore:
-        Type: S3
-        Location: !Ref ArtifactBucket
-      Stages:
-        - Name: Source
-          Actions:
-            - Name: App
-              ActionTypeId:
-                Category: Source
-                Owner: ThirdParty
-                Version: 1
-                Provider: GitHub
-              Configuration:
-                Owner: !Ref GitHubOwner
-                Repo: !Ref GitHubRepo
-                Branch: !Ref GitHubBranch
-                OAuthToken: !Ref GitHubToken
-              OutputArtifacts:
-                - Name: App
-              RunOrder: 1
-            - Name: Infra
-              ActionTypeId:
-                Category: Source
-                Owner: ThirdParty
-                Version: 1
-                Provider: GitHub
-              Configuration:
-                Owner: !Ref InfraGitHubOwner
-                Repo: !Ref InfraRepo
-                Branch: !Ref InfraBranch
-                OAuthToken: !Ref GitHubToken
-                PollForSourceChanges: false
-              OutputArtifacts:
-                - Name: Infra
-              RunOrder: 1
-        - Name: Build
-          Actions:
-            - Name: Build
-              ActionTypeId:
-                Category: Build
-                Owner: AWS
-                Version: 1
-                Provider: CodeBuild
-              Configuration:
-                ProjectName: !Ref CodeBuildProject
-                PrimarySource: Infra
-              InputArtifacts:
-                - Name: App
-                - Name: Infra
-              OutputArtifacts:
-                - Name: BuildOutput
-              RunOrder: 1
-        - Name: DeployApp
-          Actions:  
-            - Name: CreateChangeSet
-              ActionTypeId:
-                Category: Deploy
-                Owner: AWS
-                Version: 1
-                Provider: CloudFormation
-              Configuration:
-                ChangeSetName: Deploy
-                ActionMode: CHANGE_SET_REPLACE
-                StackName: !Sub ${ClusterName}-backend-service-stack
-                Capabilities: CAPABILITY_NAMED_IAM
-                TemplatePath: !Sub Infra::services/backend-service.yml
-                RoleArn: !GetAtt CloudFormationExecutionRole.Arn
-                ParameterOverrides: !Sub |
-                  {
-                    "HostedZoneName": "${HostedZoneName}",
-                    "CertificateArn": "${CertificateArn}",
-                    "ClusterName": "${ClusterName}",
-                    "ContainerVirtualCPUs": "${CPU}",
-                    "ContainerMemoryMin": "${MemoryReservation}",
-                    "LoadBalancerCname": "${LoadBalancerCname}",
-                    "EcsTasksNumber": "1",
-                    "DockerImageVersion": { "Fn::GetParam" : [ "BuildOutput", "build.json", "tag" ] },
-                    "ProjectName": "${ProjectName}",
-                    "StageEnv": "${ENV}",
-                    "ContainerPort": "${ContainerPort}",
-                    "AlbHealthCheckPath": "${ApiHealthCheckPath}"
-                  }
-              RunOrder: 1
-              InputArtifacts:
-                - Name: Infra
-                - Name: BuildOutput
-            - Name: ExecuteChangeSet
-              ActionTypeId:
-                Category: Deploy
-                Owner: AWS
-                Version: 1
-                Provider: CloudFormation
-              Configuration:
-                ChangeSetName: Deploy
-                ActionMode: CHANGE_SET_EXECUTE
-                StackName: !Sub ${ClusterName}-backend-service-stack
-                RoleArn: !GetAtt CloudFormationExecutionRole.Arn
-              RunOrder: 2
+      ServiceName: !Sub ${ProjectName}-service
+      Cluster:
+        "Fn::ImportValue": !Sub ${ClusterName}ECSCluster
+      Role: !If
+        - hasServiceDiscovery
+        - !Ref AWS::NoValue
+        - 'Fn::ImportValue': !Sub ${ClusterName}ECSRoleArn
+      TaskDefinition: !Ref Task
+      DesiredCount: !Ref EcsTasksNumber
+      PlacementConstraints:
+        - Type: distinctInstance
+      DeploymentConfiguration:
+        MinimumHealthyPercent: !If [hasOnlyOneTask, 0, 50]
+        MaximumPercent: 100
+      LoadBalancers:
+        - ContainerName: !Sub ${ProjectName}_container
+          ContainerPort: !Ref ContainerPort
+          TargetGroupArn: !Ref TargetGroup
+      HealthCheckGracePeriodSeconds: !Ref AlbHealthCheckStartPeriod
+      PlacementStrategies:
+        - Type: !Sub ${EcsTypePlacementStrategy}
+          Field: !Sub ${EcsFieldPlacementStrategy}
+      NetworkConfiguration: !If
+        - hasServiceDiscovery
+        - AwsvpcConfiguration:
+            SecurityGroups:
+              - "Fn::ImportValue": !Sub ${ClusterName}InternalAccessSecurityGroup
+            Subnets:
+              - "Fn::ImportValue": !Sub ${ClusterName}PrivateSubnet1
+              - "Fn::ImportValue": !Sub ${ClusterName}PrivateSubnet2
+        - !Ref AWS::NoValue
+      ServiceRegistries: !If
+        - hasServiceDiscovery
+        - - RegistryArn: !Sub arn:aws:servicediscovery:${AWS::Region}:${AWS::AccountId}:service/${ServiceDiscoveryService}
+        - !Ref AWS::NoValue
 
-Outputs:
-  PipelineUrl:
-    Value: !Sub https://console.aws.amazon.com/codepipeline/home?region=${AWS::Region}#/view/${Pipeline}
+  ServiceDiscoveryService:
+    Condition: hasServiceDiscovery
+    Type: AWS::ServiceDiscovery::Service
+    Properties:
+      Description: !Sub "${ClusterName}-ServiceDiscovery"
+      DnsConfig:
+        DnsRecords:
+          - Type: A
+            TTL: 5
+        NamespaceId:
+          "Fn::ImportValue": !Sub ${ClusterName}PrivateNameSpace
+      HealthCheckCustomConfig:
+        FailureThreshold: 2
+      Name: !Sub ${ProjectName}
+
+Outputs:      
+  TargetGroup:
+    Value: !Ref TargetGroup
+    Export:
+      Name: !Sub tg-${ProjectName}
+      
+  TargetGroupFullName:
+    Value: !Sub ${TargetGroup.TargetGroupFullName}
+    Export:
+      Name: !Sub ${ClusterName}-tg-web-TargetGroupFullName-${ProjectName}
+
+  serviceECS:
+    Value: !Ref Service
+    Export:
+      Name: !Sub ${ProjectName}-serviceECS
