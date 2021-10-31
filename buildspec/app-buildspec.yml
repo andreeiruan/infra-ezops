@@ -1,0 +1,26 @@
+version: 0.2
+phases:
+  install:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - $(aws ecr get-login --no-include-email --region $AWS_DEFAULT_REGION)
+      - TAG="$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | head -c 8)"
+  pre_build:
+    commands:
+      - cd $CODEBUILD_SRC_DIR_App
+      - ls
+      - cp $CODEBUILD_SRC_DIR_Infra/.env-example ./.env      
+      - cp $CODEBUILD_SRC_DIR_Infra/Docker/Dockerfile ./
+      - cp $CODEBUILD_SRC_DIR_Infra/config/app_nginx.conf ./
+      - cp $CODE_BUILD_SRC_DIR_Infra/config/nginx.conf ./
+      - cp $CODE_BUILD_SRC_DIR_Infra/scripts/entrypoint.sh ./
+      - ls -l
+      - docker build --tag "${REPOSITORY_URI}:${TAG}" .
+  post_build:
+    commands:
+      - docker push "${REPOSITORY_URI}:${TAG}"
+      - printf '{"tag":"%s:%s"}' "$REPOSITORY_URI" "$TAG" > /tmp/build.json
+artifacts:
+  files: 
+    - /tmp/build.json
+  discard-paths: yes
