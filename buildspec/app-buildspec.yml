@@ -10,7 +10,7 @@ phases:
       - ls
       - cd $CODEBUILD_SRC_DIR_App
       - ls
-      - cp $CODEBUILD_SRC_DIR_Infra/.env-example ./.env      
+      - cp $CODEBUILD_SRC_DIR_Infra/env.txt ./.env      
       - cp $CODEBUILD_SRC_DIR_Infra/Docker/Dockerfile ./
       - cp $CODEBUILD_SRC_DIR_Infra/config/app_nginx.conf ./
       - cp $CODE_BUILD_SRC_DIR_Infra/config/nginx.conf ./
