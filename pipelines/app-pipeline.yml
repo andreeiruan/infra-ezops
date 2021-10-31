@@ -32,8 +32,7 @@ Parameters:
     Default: "dev"
     Type: String
   
-  ProjectName:
-    Default: "default"
+  ProjectName:    
     Type: String
   
   ######## services parameters ########
@@ -45,8 +44,7 @@ Parameters:
     Default: 1
     Type: Number
 
-  ClusterName:
-    Default: Application
+  ClusterName:    
     Type: String
 
   CertificateArn:
