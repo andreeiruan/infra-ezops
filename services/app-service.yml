@@ -200,7 +200,7 @@ Resources:
         Name: !Ref ProjectName
       Source:
         Type: CODEPIPELINE
-        BuildSpec: !Sub "buildspec/${EnvironmentFolder}/build-backend.yml"
+        BuildSpec: !Sub "buildspec/app-buildspec.yml"
       VpcConfig:
         VpcId:
           'Fn::ImportValue': !Sub ${ClusterName}VPC
