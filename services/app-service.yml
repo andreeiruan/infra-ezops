@@ -157,9 +157,9 @@ Resources:
         - "Fn::ImportValue": !Sub ${ClusterName}BackendAlbListenerForHttp
       Priority: !Ref SiteTgPriority
       Conditions:
-        - Field: path-pattern
+        - Field: host-header
           Values:
-            - /dummy
+            - !Sub ${LoadBalancerCname}
       Actions:
         - TargetGroupArn: !Ref TargetGroup
           Type: forward
