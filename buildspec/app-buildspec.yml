@@ -7,6 +7,7 @@ phases:
       - TAG="$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | head -c 8)"
   pre_build:
     commands:
+      - ls
       - cd $CODEBUILD_SRC_DIR_App
       - ls
       - cp $CODEBUILD_SRC_DIR_Infra/.env-example ./.env      
@@ -14,7 +15,7 @@ phases:
       - cp $CODEBUILD_SRC_DIR_Infra/config/app_nginx.conf ./
       - cp $CODE_BUILD_SRC_DIR_Infra/config/nginx.conf ./
       - cp $CODE_BUILD_SRC_DIR_Infra/scripts/entrypoint.sh ./
-      - ls -l
+      - ls
       - docker build --tag "${REPOSITORY_URI}:${TAG}" .
   post_build:
     commands:
