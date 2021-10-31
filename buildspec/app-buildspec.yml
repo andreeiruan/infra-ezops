@@ -8,12 +8,12 @@ phases:
   pre_build:
     commands:
       - ls
+      - cp $CODEBUILD_SRC_DIR_Infra/config/env.txt $CODEBUILD_SRC_DIR_App/.env 
+      - cp $CODEBUILD_SRC_DIR_Infra/Docker/Dockerfile $CODEBUILD_SRC_DIR_App
+      - cp $CODEBUILD_SRC_DIR_Infra/config/app_nginx.conf $CODEBUILD_SRC_DIR_App
+      - cp $CODE_BUILD_SRC_DIR_Infra/config/nginx.conf $CODEBUILD_SRC_DIR_App
+      - cp $CODE_BUILD_SRC_DIR_Infra/scripts/entrypoint.sh $CODEBUILD_SRC_DIR_App
       - cd $CODEBUILD_SRC_DIR_App
-      - ls         
-      - cp $CODEBUILD_SRC_DIR_Infra/Docker/Dockerfile ./
-      - cp $CODEBUILD_SRC_DIR_Infra/config/app_nginx.conf ./
-      - cp $CODE_BUILD_SRC_DIR_Infra/config/nginx.conf ./
-      - cp $CODE_BUILD_SRC_DIR_Infra/scripts/entrypoint.sh ./
       - ls
       - docker build --tag "${REPOSITORY_URI}:${TAG}" .
   post_build:
