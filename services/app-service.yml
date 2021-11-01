@@ -10,19 +10,21 @@ Parameters:
 
   ContainerPort:
     Type: String
-    Default: 3000
+
+  TaskCpu:
+    Type: String
+
+  TaskMemory:
+    Type: String  
 
   ContainerVirtualCPUs:
     Type: String
-    Default: 1
+
+  ContainerMemory:
+    Type: String    
 
   ContainerMemoryMin:
-    Type: String
-    Default: 4096
-
-  ContainerMemoryMax:
-    Type: String
-    Default: LIMITLESS
+    Type: String    
 
   DockerImageVersion:
     Type: String
@@ -39,7 +41,7 @@ Parameters:
 
   AlbHealthCheckPath:
     Type: String
-    Default: /v1/health
+    Default: /
 
   AlbHealthCheckTimeout:
     Type: String
@@ -101,20 +103,19 @@ Parameters:
   
   StageEnv:
     Type: String
-    Default: "DEV"
+    Default: "dev"
 
   
 Conditions:
   hasSSL: !Equals [!Ref HasHTTPS, "true"]
-  hasOnlyOneTask: !Equals [!Ref EcsTasksNumber, "1"]
-  containerHasMemoryLimit: !Not [!Equals [!Ref ContainerMemoryMax, "LIMITLESS"]]
+  hasOnlyOneTask: !Equals [!Ref EcsTasksNumber, "1"]  
   hasServiceDiscovery: !Equals [!Ref ContainerNetworkMode, "awsvpc"]
 
 Resources:
   LogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub EliteGamingLive/${StageEnv}/API
+      LogGroupName: !Sub Cleanetto/${StageEnv}/HeyStack
 
   TargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
@@ -146,15 +147,15 @@ Resources:
       Certificates:
         - CertificateArn: !Ref CertificateArn
       ListenerArn:
-        "Fn::ImportValue": !Sub ${ClusterName}BackendAlbListenerForHttps
+        "Fn::ImportValue": !Sub ${ClusterName}AppAlbListenerForHttps
 
   SiteNameListenerRule:
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
       ListenerArn: !If
         - hasSSL
-        - "Fn::ImportValue": !Sub ${ClusterName}BackendAlbListenerForHttps
-        - "Fn::ImportValue": !Sub ${ClusterName}BackendAlbListenerForHttp
+        - "Fn::ImportValue": !Sub ${ClusterName}AppAlbListenerForHttps
+        - "Fn::ImportValue": !Sub ${ClusterName}AppAlbListenerForHttp
       Priority: !Ref SiteTgPriority
       Conditions:
         - Field: host-header
@@ -173,7 +174,7 @@ Resources:
           Type: CNAME
           TTL: 60
           ResourceRecords:
-            - "Fn::ImportValue": !Sub "${ClusterName}BackendAlbDns"
+            - "Fn::ImportValue": !Sub "${ClusterName}AppAlbDns"
 
   EcsExecutionRoleArn:
     Type: AWS::IAM::Role
@@ -211,8 +212,8 @@ Resources:
       Family: !Sub ${ProjectName}_taskDefinition
       NetworkMode: !Ref ContainerNetworkMode
       ExecutionRoleArn: !Ref EcsExecutionRoleArn
-      Memory: 512      
-      Cpu: 256
+      Memory: !Ref TaskMemory      
+      Cpu: !Ref TaskCpu
       ContainerDefinitions:
         - Name: !Sub ${ProjectName}_container
           Image: !Sub ${DockerImageVersion}
@@ -220,13 +221,13 @@ Resources:
             - ContainerPort: !Ref ContainerPort
               HostPort: !If [hasServiceDiscovery, !Ref ContainerPort, 0]
           MemoryReservation: !Ref ContainerMemoryMin
-          Memory: 512
-          Cpu: 128
+          Memory: !Ref ContainerMemory
+          Cpu: !Ref ContainerVirtualCPUs
           Hostname: !Sub Application.${ClusterName}
           LogConfiguration:
             LogDriver: awslogs
             Options:
-              awslogs-group: !Sub ${ClusterName}/${StageEnv}/API
+              awslogs-group: !Sub Cleanetto/${StageEnv}/HeyStack
               awslogs-stream-prefix: /service
               awslogs-region: !Ref AWS::Region
           Privileged: true

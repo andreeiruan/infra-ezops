@@ -20,9 +20,6 @@ Parameters:
   S3Bucket:
     Type: String
 
-  TypeProject:
-    Type: String
-
   EcsImage:
     Type: String
 
@@ -180,7 +177,7 @@ Resources:
           #====== Install AWSLOGS
             yum install -y awslogs
             mv /etc/awslogs/awslogs.conf /etc/awslogs/awslogs.conf.bkp
-            aws s3 cp s3://${S3Bucket}/cloudformation/${TypeProject}/awslogs.conf /etc/awslogs/awslogs.conf
+            aws s3 cp s3://${S3Bucket}/cloudformation/${ClusterName}/awslogs.conf /etc/awslogs/awslogs.conf
             sed -i "s/clustername/${ECSCluster}/g" /etc/awslogs/awslogs.conf
             sed -i "s/instanceID/`curl -s http://169.254.169.254/latest/meta-data/instance-id`/g" /etc/awslogs/awslogs.conf
             service awslogs start
@@ -201,7 +198,7 @@ Resources:
       DesiredCapacity: !Ref AsgServiceDesiredWeb
       MaxSize: !Ref AsgServiceMaxWeb
       TargetGroupARNs:
-        - 'Fn::ImportValue': !Sub ${ClusterName}BackendAlbDefaultTargetGroup
+        - 'Fn::ImportValue': !Sub ${ClusterName}AppAlbDefaultTargetGroup
       VPCZoneIdentifier:
         - 'Fn::ImportValue': !Sub ${ClusterName}PrivateSubnet1
         - 'Fn::ImportValue': !Sub ${ClusterName}PrivateSubnet2

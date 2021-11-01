@@ -45,7 +45,7 @@ Resources:
       Port: 80
       Protocol: HTTP
       Matcher:
-        HttpCode: '301'
+        HttpCode: 200-399
       HealthCheckIntervalSeconds: 10
       HealthCheckPath: /
       HealthCheckProtocol: HTTP
@@ -86,52 +86,27 @@ Outputs:
     Export:
       Name: !Sub ${ClusterName}LoadBalancerSG
 
-  FrontendAlbDefaultTargetGroup:
+  AppAlbDefaultTargetGroup:
     Value: !Ref PublicAlbDefaultTargetGroup
     Export:
-      Name: !Sub ${ClusterName}FrontendAlbDefaultTargetGroup
+      Name: !Sub ${ClusterName}AppAlbDefaultTargetGroup
 
-  FrontendAlbDns:
-    Value: !Sub ${PublicAlb.DNSName}
-    Export:
-      Name: !Sub ${ClusterName}FrontendAlbDns
-
-  FrontendAlbFullName:
-    Value: !Sub ${PublicAlb.LoadBalancerFullName}
-    Export:
-      Name: !Sub ${ClusterName}FrontendAlbFullName
-
-  FrontendAlbListenerForHttp:
-    Value: !Ref PublicAlbListenerForHttp
-    Export:
-      Name: !Sub ${ClusterName}FrontendAlbListenerForHttp
-
-  FrontendAlbListenerForHttps:
-    Value: !Ref PublicAlbListenerForHttps
-    Export:
-      Name: !Sub ${ClusterName}FrontendAlbListenerForHttps
-
-  BackendAlbDefaultTargetGroup:
-    Value: !Ref PublicAlbDefaultTargetGroup
-    Export:
-      Name: !Sub ${ClusterName}BackendAlbDefaultTargetGroup
-
-  BackendAlbDns:
+  AppAlbDns:
     Value: !GetAtt PublicAlb.DNSName
     Export:
-      Name: !Sub ${ClusterName}BackendAlbDns
+      Name: !Sub ${ClusterName}AppAlbDns
 
-  BackendAlbFullName:
+  AppAlbFullName:
     Value: !GetAtt PublicAlb.LoadBalancerFullName
     Export:
-      Name: !Sub ${ClusterName}BackendAlbFullName
+      Name: !Sub ${ClusterName}AppAlbFullName
 
-  BackendAlbListenerForHttp:
+  AppAlbListenerForHttp:
     Value: !Ref PublicAlbListenerForHttp
     Export:
-      Name: !Sub ${ClusterName}BackendAlbListenerForHttp
+      Name: !Sub ${ClusterName}AppAlbListenerForHttp
 
-  BackendAlbListenerForHttps:
+  AppAlbListenerForHttps:
     Value: !Ref PublicAlbListenerForHttps
     Export:
-      Name: !Sub ${ClusterName}BackendAlbListenerForHttps
+      Name: !Sub ${ClusterName}AppAlbListenerForHttps

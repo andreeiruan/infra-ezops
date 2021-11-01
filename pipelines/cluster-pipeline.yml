@@ -14,7 +14,7 @@ Parameters:
   ClusterName:
     Type: String
 
-  PropertiesName:
+  S3BucketArtifact: #!!
     Type: String
 
   DefaultAcmCertificateArn:
@@ -40,11 +40,10 @@ Parameters:
     Type: String
 
   ECSInstanceTypeWeb:
-    Type: String
+    Type: String    
   
   KeyName:
-    Type: String
-    Description: Key Pair Name #!!
+    Type: String    
 
   AsgServiceMinWeb:
     Type: String
@@ -58,9 +57,6 @@ Parameters:
   S3Bucket:
     Type: String
 
-  TypeProject:
-    Type: String
-
   EcsImage:
     Type: String
 
@@ -71,7 +67,7 @@ Metadata:
         default: Cluster General Params
       Parameters:
         - ClusterName
-        - PropertiesName
+        - S3BucketArtifact
         - HostedZoneName
     
     - Label:
@@ -104,7 +100,6 @@ Metadata:
         - AsgServiceDesiredWeb
         - AsgServiceMaxWeb
         - S3Bucket
-        - TypeProject
         - EcsImage
       
 Resources:
@@ -189,12 +184,12 @@ Resources:
     Type: AWS::S3::Bucket
     # DeletionPolicy: Retain
     Properties:
-      BucketName: !Ref PropertiesName
+      BucketName: !Ref S3BucketArtifact
   
   Pipeline:
     Type: AWS::CodePipeline::Pipeline
     Properties:
-      Name: !Ref PropertiesName
+      Name: !Ref S3BucketArtifact
       RoleArn: !GetAtt CodePipelineServiceRole.Arn
       ArtifactStore:
         Type: S3
@@ -343,8 +338,7 @@ Resources:
                     "AsgServiceDesiredWeb": "${AsgServiceDesiredWeb}",
                     "S3Bucket": "${S3Bucket}",
                     "EcsImage": "${EcsImage}",
-                    "HostedZoneName": "${HostedZoneName}",
-                    "TypeProject": "${TypeProject}"
+                    "HostedZoneName": "${HostedZoneName}"
                   }
               RunOrder: 5
               InputArtifacts:

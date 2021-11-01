@@ -36,13 +36,20 @@ Parameters:
     Type: String
   
   ######## services parameters ########
-  MemoryReservation:
-    Default: "1024"
+  ContainerMemoryMin:
+    Type: String    
+
+  TaskCpu:
     Type: String
 
-  CPU:
-    Default: 1
-    Type: Number
+  TaskMemory:
+    Type: String  
+
+  ContainerVirtualCPUs:
+    Type: String
+
+  ContainerMemory:
+    Type: String   
 
   ClusterName:    
     Type: String
@@ -58,13 +65,8 @@ Parameters:
   
   ApiHealthCheckPath:
     Type: String
-  
-  EnvironmentFolder:
-    Type: String
-    Default: development
 
 Resources:
-
   ArtifactBucket: 
     Type: 'AWS::S3::Bucket'
     Properties: {}
@@ -220,12 +222,12 @@ Resources:
             Value: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${Repository}
           - Name: StackName
             Value: !Ref StackName
-          - Name: PROPERTIES_NAME
-            Value: !Ref ArtifactBucket
+          - Name: PROJECT_NAME
+            Value: !Ref ProjectName
           - Name: CLUSTER_NAME
             Value: !Ref ClusterName
-          - Name: SITE_NAME
-            Value: !Ref LoadBalancerCname
+          - Name: ENVIRONMENT
+            Value: !Ref ENV
 
   Pipeline:
     Type: AWS::CodePipeline::Pipeline
@@ -304,8 +306,12 @@ Resources:
                     "HostedZoneName": "${HostedZoneName}",
                     "CertificateArn": "${CertificateArn}",
                     "ClusterName": "${ClusterName}",
-                    "ContainerVirtualCPUs": "${CPU}",
-                    "ContainerMemoryMin": "${MemoryReservation}",
+                    "ContainerVirtualCPUs": "${ContainerVirtualCPUs}",
+                    "ContainerMemory": "${ContainerMemory}",
+                    "TaskCpu": "${TaskCpu}",
+                    "TaskMemory": "${TaskMemory}",
+                    "ContainerMemory": "${ContainerMemory}",
+                    "ContainerMemoryMin": "${ContainerMemoryMin}",
                     "LoadBalancerCname": "${LoadBalancerCname}",
                     "EcsTasksNumber": "1",
                     "DockerImageVersion": { "Fn::GetParam" : [ "BuildOutput", "build.json", "tag" ] },
